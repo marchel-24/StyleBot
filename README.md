@@ -39,5 +39,5 @@ Ikuti langkah-langkah ini untuk menjalankan bot di server Anda sendiri.
 ### ### 2. Clone Repositori
 Clone repositori ini ke mesin lokal Anda:
 ```bash
-git clone [https://github.com/orgs/italia/repositories](https://github.com/orgs/italia/repositories)
-cd [nama-folder-proyek]
+git clone https://github.com/marchel-24/StyleBot.git
+cd StyleBot
