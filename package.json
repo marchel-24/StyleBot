@@ -1,0 +1,19 @@
+{
+  "name": "qroqbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "discord.js": "^14.24.1",
+    "dotenv": "^17.2.3",
+    "groq-sdk": "^0.34.0",
+    "quick.db": "^9.1.7"
+  }
+}
