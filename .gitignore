@@ -1,0 +1,15 @@
+# Folder virtual environment
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# File environment yang berisi secret keys
+.env
+
+# Folder hasil build/distribusi
+build/
+dist/
+*.egg-info/
