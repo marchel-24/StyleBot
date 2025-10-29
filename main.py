@@ -102,6 +102,61 @@ async def outfit(
         print(f"Terjadi error: {e}")
         await interaction.followup.send("Maaf, terjadi kesalahan saat saya mencoba meracik outfit untukmu. Coba lagi nanti.")
 
+@bot.event
+async def on_message(message):
+    # 1. Mencegah bot merespons pesannya sendiri (sangat penting!)
+    if message.author == bot.user:
+        return
+
+    # 2. Periksa apakah bot di-mention dalam pesan
+    if bot.user.mentioned_in(message):
+        # Tampilkan status "sedang mengetik..." agar user tahu bot sedang bekerja
+        async with message.channel.typing():
+            try:
+                # 3. Ambil isi pesan dan bersihkan dari mention bot
+                # Ini akan menghapus "<@BOT_ID>" dari teks pesan
+                user_question = message.content.replace(f'<@{bot.user.id}>', '').strip()
+
+                # Jika setelah dibersihkan tidak ada teks tersisa, jangan lakukan apa-apa
+                if not user_question:
+                    await message.reply("Hai! Ada yang bisa aku bantu seputar outfit? Mention aku dan ajukan pertanyaanmu, ya!")
+                    return
+
+                # 4. Buat prompt yang lebih fleksibel untuk LLM
+                prompt = f"""
+                Anda adalah seorang fashion stylist AI ahli bernama G-Style.
+                Tugas Anda adalah menjawab pertanyaan atau permintaan pengguna tentang fashion dan memberikan rekomendasi outfit.
+                Jawab pertanyaan berikut dengan detail, kreatif, dan ramah dalam Bahasa Indonesia.
+
+                Pertanyaan atau Permintaan Pengguna: "{user_question}"
+                """
+
+                # 5. Kirim permintaan ke API Groq (sama seperti sebelumnya)
+                chat_completion = groq_client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Anda adalah fashion stylist AI yang membantu memberikan rekomendasi outfit berdasarkan pertanyaan bebas dari pengguna."
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        }
+                    ],
+                    # Ganti dengan model yang sedang aktif
+                    model="llama-3.1-8b-instant", 
+                )
+
+                response = chat_completion.choices[0].message.content
+
+                # 6. Balas pesan pengguna secara langsung (reply)
+                await message.reply(response)
+
+            except Exception as e:
+                print(f"Terjadi error pada on_message: {e}")
+                await message.reply("Waduh, sepertinya ada sedikit gangguan di koneksiku. Coba tanya lagi beberapa saat, ya.")
+
+# ... (baris bot.run(DISCORD_TOKEN) Anda ada di bawah sini) ...
 
 # 9. Jalankan bot dengan token Anda
 if DISCORD_TOKEN:
