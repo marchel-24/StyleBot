@@ -38,7 +38,7 @@ async def perkenalan(interaction: discord.Interaction):
 
     # Gunakan nama tersebut di dalam judul embed
     embed = discord.Embed(
-        title=f"👋 Halo, {user_name}! Aku Gaya-san, Asisten Fashion Pribadimu!",
+        title=f"👋 Halo, {user_name}! Aku Style-E, Asisten Fashion Pribadimu!",
         description="Aku di sini untuk membantumu menemukan outfit terbaik setiap hari. Berikut beberapa hal yang bisa aku lakukan:",
         color=discord.Color.gold(),
     )
@@ -66,7 +66,7 @@ async def perkenalan(interaction: discord.Interaction):
     name="outfit", description="Dapatkan rekomendasi outfit harian dari AI Stylist."
 )
 @app_commands.describe(
-    gaya="Gaya busana yang diinginkan.", acara="Konteks atau acara outfit."
+    gaya="Desired fashion style.", acara="Outfit context or occasion."
 )
 async def outfit(interaction: discord.Interaction, gaya: str, acara: str):
     await interaction.response.defer()
@@ -75,17 +75,17 @@ async def outfit(interaction: discord.Interaction, gaya: str, acara: str):
     pref_text = ""
     if explicit_prefs:
         styles, colors, avoids = explicit_prefs
-        pref_text += "\n\nProfil Gaya Pengguna: "
+        pref_text += "\n\nUser preference Profile: "
         if styles:
-            pref_text += f"Suka gaya {styles}. "
+            pref_text += f"Like this type of style {styles}. "
         if colors:
-            pref_text += f"Suka warna {colors}. "
+            pref_text += f"Like this color {colors}. "
         if avoids:
-            pref_text += f"Hindari {avoids}."
+            pref_text += f"Avoids {avoids}."
     elif implicit_prefs := db.get_user_preferences(interaction.user.id):
-        pref_text = f"\n\nPengguna ini sebelumnya menyukai outfit seperti: {', '.join(implicit_prefs[:2])}"
+        pref_text = f"\n\nThis user previously liked outfits like: {', '.join(implicit_prefs[:2])}"
 
-    prompt = f"Anda adalah fashion stylist AI. Berikan rekomendasi outfit detail untuk gaya '{gaya}' di acara '{acara}'.{pref_text} Jawab dalam Bahasa Indonesia."
+    prompt = f"You are **Styl-E**, a warm, confident, and trend-savvy virtual fashion stylist.Your mission is to give friendly, clear, and stylish advice that makes people feel good and confident. Give outfit recommendation with '{gaya}' as the style, for '{acara}' as occasion. {pref_text} answer in Bahasa Indonesia."
     try:
         chat_completion = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant"
@@ -182,7 +182,7 @@ class Lemari(app_commands.Group):
             )
             return
         wardrobe_list = "\n".join(f"- {item[0]} warna {item[1]}" for item in items)
-        prompt = f"Anda adalah fashion stylist. Buat satu kombinasi outfit untuk acara '{acara}' HANYA dari daftar pakaian berikut:\n{wardrobe_list}\nJelaskan mengapa cocok. Jangan menyarankan item yang tidak ada di daftar. Jawab dalam Bahasa Indonesia."
+        prompt = f"You are **Styl-E**, a warm, confident, and trend-savvy virtual fashion stylist.Your mission is to give friendly, clear, and stylish advice that makes people feel good and confident. Make an outfit combination for '{acara}' as the occasion. ONLY from the following clothing list:\n{wardrobe_list}\nExplain why it's suitable. Don't suggest items that aren't on the list. Answer in Bahasa Indonesia."
         try:
             chat_completion = groq_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
@@ -226,30 +226,42 @@ async def on_message(message):
             context_text = ""
             if prefs := db.get_explicit_preferences(message.author.id):
                 # ... (kode untuk mengambil preferensi tetap sama)
-                context_text += "\n\nProfil Gaya Pengguna: "
+                context_text += "\n\nUser preference Profile: "
                 if prefs[0]:
-                    context_text += f"Suka gaya {prefs[0]}. "
+                    context_text += f"Like this type of style {prefs[0]}. "
                 if prefs[1]:
-                    context_text += f"Suka warna {prefs[1]}. "
+                    context_text += f"Like this color {prefs[1]}. "
                 if prefs[2]:
-                    context_text += f"Hindari {prefs[2]}."
+                    context_text += f"Avoids {prefs[2]}."
 
             if items := db.get_wardrobe_items(message.author.id):
                 # ... (kode untuk mengambil item lemari tetap sama)
                 wardrobe_list = ", ".join(f"{item[0]}" for item in items)
-                context_text += f"\nIsi Lemari Digital: {wardrobe_list}"
+                context_text += f"\nDigital Wardrobe Contents: {wardrobe_list}"
 
             # Perbarui prompt untuk menyertakan nama pengguna dan instruksi untuk menyapa
             prompt = f"""
-            Anda adalah fashion stylist AI ramah bernama Gaya-san.
-            Seorang pengguna bernama "{user_name}" bertanya: "{user_question}"
+            You are **Styl-E**, a warm, confident, and trend-savvy virtual fashion stylist.
+            Your mission is to give friendly, clear, and stylish advice that makes people feel good and confident.
+
+            You excel at:
+            1. **Outfit Crafting:** Combine user-provided clothing items into complete, fashionable looks and explain *why* they work.
+            2. **Specific Advice:** Help users pick clothes for their body type, occasion, or vibe — always positive, inclusive, and practical.
+            3. **Expertise:** You're fluent in streetwear, minimalist, smart casual, vintage, and techwear styles.
+            4. **Tips & Tricks:** Offer clever insights on layering, colors, accessories, and balance.
+            5. **OOTD:** If asked for an "Outfit of the Day", ask clarifying questions first like weather or occasion, then build a killer look.
+
+            Your tone: Energetic, stylish, and encouraging — like a best friend with impeccable fashion sense.
+            Answer in a clear and well-formatted style using emojis and markdown to make it fun to read.
+
+            A user named "{user_name}" is asking: "{user_question}"
             
             {context_text}
 
-            Tugas Anda:
-            1.  Mulai jawaban Anda dengan menyapa pengguna dengan namanya (contoh: "Halo {user_name}!" atau "Tentu, {user_name}!").
-            2.  Jawab pertanyaannya secara detail dan personal menggunakan informasi profil dan isi lemari yang diberikan.
-            3.  Gunakan gaya percakapan yang santai dalam Bahasa Indonesia.
+            Your Task:
+            1. Start your answer by greeting the user by name (e.g., "Hello {user_name}!" or "Sure, {user_name}!").
+            2. Answer the question in detail and personally using the profile information and the contents of the provided closet.
+            3. Answer in Bahasa Indonesia.
             """
 
             chat_completion = groq_client.chat.completions.create(
