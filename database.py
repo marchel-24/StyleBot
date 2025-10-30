@@ -63,7 +63,8 @@ def init_db():
                     """
                     CREATE TABLE IF NOT EXISTS preferences (
                         user_id INTEGER PRIMARY KEY, favorite_styles TEXT,
-                        favorite_colors TEXT, avoided_items TEXT
+                        favorite_colors TEXT, avoided_items TEXT,
+                        gender TEXT -- DIUBAH: Menambahkan kolom gender
                     )
                 """
                 )
@@ -75,23 +76,34 @@ def execute_query(query, params=None, fetch=None):
     conn = get_db_connection()
     if not conn:
         return [] if fetch else None
+    
     if DB_TYPE == "postgresql":
         query = query.replace("?", "%s")
+        
     result = None
+    cursor = None # BARU: Definisikan kursor di luar try
     try:
-        with conn.cursor() as cursor:
-            cursor.execute(query, params or ())
-            if fetch == "one":
-                result = cursor.fetchone()
-            elif fetch == "all":
-                result = cursor.fetchall()
-            else:
-                conn.commit()
+        cursor = conn.cursor() # BARU: Buat kursor tanpa 'with'
+        
+        cursor.execute(query, params or ())
+        
+        if fetch == "one":
+            result = cursor.fetchone()
+        elif fetch == "all":
+            result = cursor.fetchall()
+        else:
+            conn.commit() # Commit jika bukan query SELECT
+            
     except Exception as e:
-        print(f"Query gagal: {e}")
+        print(f"Query gagal: {e}") # Ini akan mencetak error jika ada
+        
     finally:
+        # BARU: Selalu tutup kursor dan koneksi
+        if cursor:
+            cursor.close()
         if conn:
             conn.close()
+            
     return result
 
 
@@ -112,17 +124,17 @@ def save_rating(user_id, outfit_description, rating):
     query = "INSERT INTO ratings (user_id, outfit_description, rating) VALUES (?, ?, ?)"
     execute_query(query, (user_id, outfit_description, rating))
 
-
-def update_preferences(user_id, styles, colors, avoids):
+def update_preferences(user_id, styles, colors, avoids, gender):
     if DB_TYPE == "postgresql":
-        query = "INSERT INTO preferences (user_id, favorite_styles, favorite_colors, avoided_items) VALUES (%s, %s, %s, %s) ON CONFLICT (user_id) DO UPDATE SET favorite_styles = EXCLUDED.favorite_styles, favorite_colors = EXCLUDED.favorite_colors, avoided_items = EXCLUDED.avoided_items"
+        query = "INSERT INTO preferences (user_id, favorite_styles, favorite_colors, avoided_items, gender) VALUES (%s, %s, %s, %s, %s) ON CONFLICT (user_id) DO UPDATE SET favorite_styles = EXCLUDED.favorite_styles, favorite_colors = EXCLUDED.favorite_colors, avoided_items = EXCLUDED.avoided_items, gender = EXCLUDED.gender"
     else:  # SQLite
-        query = "INSERT INTO preferences (user_id, favorite_styles, favorite_colors, avoided_items) VALUES (?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET favorite_styles = excluded.favorite_styles, favorite_colors = excluded.favorite_colors, avoided_items = excluded.avoided_items"
-    execute_query(query, (user_id, styles, colors, avoids))
+        query = "INSERT INTO preferences (user_id, favorite_styles, favorite_colors, avoided_items, gender) VALUES (?, ?, ?, ?, ?) ON CONFLICT(user_id) DO UPDATE SET favorite_styles = excluded.favorite_styles, favorite_colors = excluded.favorite_colors, avoided_items = excluded.avoided_items, gender = excluded.gender"
+    execute_query(query, (user_id, styles, colors, avoids, gender))
 
 
 def get_explicit_preferences(user_id):
-    query = "SELECT favorite_styles, favorite_colors, avoided_items FROM preferences WHERE user_id = ?"
+    query = "SELECT favorite_styles, favorite_colors, avoided_items, gender FROM preferences WHERE user_id = ?"
+    # Ini sekarang akan mengembalikan 4 nilai: (styles, colors, avoids, gender)
     return execute_query(query, (user_id,), fetch="one")
 
 

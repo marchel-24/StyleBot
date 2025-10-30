@@ -5,30 +5,43 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 from groq import Groq
+import logging  # BARU: Impor modul logging
 
 import database as db
 from view import RatingView, AddItemModal, PreferenceModal
 
 # --- Konfigurasi Awal ---
 load_dotenv()
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[
+        logging.FileHandler("bot.log", mode='w', encoding='utf-8'), # Log ke file
+        logging.StreamHandler() # Log ke konsol
+    ]
+)
+# Dapatkan instance logger
+logger = logging.getLogger(__name__)
+
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 groq_client = Groq(api_key=GROQ_API_KEY)
 intents = discord.Intents.default()
-intents.message_content = True  # Diperlukan untuk on_message
+intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 
 # --- Event Utama Bot ---
 @bot.event
 async def on_ready():
-    print(f"Bot telah login sebagai {bot.user}")
+    logger.info(f"Bot telah login sebagai {bot.user}")
     db.init_db()  # Membuat file DB SQLite jika belum ada
     try:
         synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} command(s)")
+        logger.info(f"Synced {len(synced)} command(s)")
     except Exception as e:
-        print(f"Gagal sinkronisasi command: {e}")
+        logger.error(f"Gagal sinkronisasi command: {e}", exc_info=True)
 
 
 # --- Perintah Dasar & Perkenalan ---
@@ -43,12 +56,12 @@ async def perkenalan(interaction: discord.Interaction):
         color=discord.Color.gold(),
     )
     embed.add_field(
-        name="`/outfit`",
+        name="🧥`/outfit`",
         value="Dapatkan rekomendasi outfit cepat berdasarkan gaya dan acara.",
         inline=False,
     )
     embed.add_field(
-        name="`/lemari`",
+        name="🚪`/lemari`",
         value="Simpan koleksi pakaianmu dan minta aku meracik outfit dari sana.",
         inline=False,
     )
@@ -66,7 +79,7 @@ async def perkenalan(interaction: discord.Interaction):
     name="outfit", description="Dapatkan rekomendasi outfit harian dari AI Stylist."
 )
 @app_commands.describe(
-    gaya="Desired fashion style.", acara="Outfit context or occasion."
+    gaya="Style busana yang diinginkan.", acara="Konteks atau acara."
 )
 async def outfit(interaction: discord.Interaction, gaya: str, acara: str):
     await interaction.response.defer()
@@ -74,18 +87,43 @@ async def outfit(interaction: discord.Interaction, gaya: str, acara: str):
     explicit_prefs = db.get_explicit_preferences(interaction.user.id)
     pref_text = ""
     if explicit_prefs:
-        styles, colors, avoids = explicit_prefs
+        styles, colors, avoids, gender = explicit_prefs
         pref_text += "\n\nUser preference Profile: "
-        if styles:
-            pref_text += f"Like this type of style {styles}. "
+        #if styles:
+        #    pref_text += f"Like this type of style {styles}. "
         if colors:
             pref_text += f"Like this color {colors}. "
         if avoids:
-            pref_text += f"Avoids {avoids}."
+            pref_text += f"Avoids {avoids}. "
+        if gender:
+            pref_text += f"Prefers {gender} styles. "
+
     elif implicit_prefs := db.get_user_preferences(interaction.user.id):
         pref_text = f"\n\nThis user previously liked outfits like: {', '.join(implicit_prefs[:2])}"
 
-    prompt = f"You are **Styl-E**, a warm, confident, and trend-savvy virtual fashion stylist.Your mission is to give friendly, clear, and stylish advice that makes people feel good and confident. Give outfit recommendation with '{gaya}' as the style, for '{acara}' as occasion. {pref_text} answer in Bahasa Indonesia."
+    prompt = f"""You are **Styl-E**, a warm, confident, and trend-savvy virtual fashion stylist.Your mission is to give friendly, clear, and stylish advice that makes people feel good and confident. 
+    
+            You excel at:
+            1. **Outfit Crafting:** Combine user-provided clothing items into complete, fashionable looks and explain *why* they work.
+            2. **Specific Advice:** Help users pick clothes for their body type, occasion, or vibe — always positive, inclusive, and practical.
+            3. **Expertise:** You're fluent in streetwear, minimalist, smart casual, vintage, and techwear styles.
+            4. **Tips & Tricks:** Offer clever insights on layering, colors, accessories, and balance.
+
+            Your tone: Energetic, stylish, and encouraging — like a best friend with impeccable fashion sense.
+            Answer in a clear and well-formatted style using emojis and markdown to make it fun to read.
+
+            Give outfit recommendation with '{gaya}' as the style, for '{acara}' as occasion, 
+            Reference Data (This is a SILENT context filter. Do NOT mention it):
+            {pref_text} 
+            
+            **Your outfit recommendations MUST be complete.** A complete outfit includes at minimum:
+                 1.  **Top:** (e.g., shirt, t-shirt, jacket. If the context is a beach, you can specify 'topless' or 'bikini top').
+                 2.  **Bottom:** (e.g., pants, skirt, shorts).
+                 3.  **Footwear:** (e.g., sneakers, boots. If the context is a beach, you can specify 'barefoot').
+                 You may add accessories *after* these three core items are mentioned.
+
+            answer in Bahasa Indonesia.
+            """
     try:
         chat_completion = groq_client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}], model="llama-3.1-8b-instant"
@@ -120,7 +158,8 @@ class Preferensi(app_commands.Group):
                 ephemeral=True,
             )
             return
-        styles, colors, avoids = prefs
+        
+        styles, colors, avoids, gender = prefs
         embed = discord.Embed(
             title=f"Preferensi Gaya Milik {interaction.user.display_name}",
             color=discord.Color.green(),
@@ -133,6 +172,9 @@ class Preferensi(app_commands.Group):
         )
         embed.add_field(
             name="Item Dihindari", value=avoids or "_Belum diatur_", inline=False
+        )
+        embed.add_field(
+            name="Preferensi Gaya (Gender)", value=gender or "_Belum diatur_", inline=False
         )
         await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -182,7 +224,34 @@ class Lemari(app_commands.Group):
             )
             return
         wardrobe_list = "\n".join(f"- {item[0]} warna {item[1]}" for item in items)
-        prompt = f"You are **Styl-E**, a warm, confident, and trend-savvy virtual fashion stylist.Your mission is to give friendly, clear, and stylish advice that makes people feel good and confident. Make an outfit combination for '{acara}' as the occasion. ONLY from the following clothing list:\n{wardrobe_list}\nExplain why it's suitable. Don't suggest items that aren't on the list. Answer in Bahasa Indonesia."
+        
+        explicit_prefs = db.get_explicit_preferences(interaction.user.id)
+        pref_text = ""
+        if explicit_prefs and explicit_prefs[3]: 
+             pref_text = f"User prefers {explicit_prefs[3]} styles."
+
+        prompt = f"""You are **Styl-E**, a warm, confident, and trend-savvy virtual fashion stylist.
+                You excel at:
+                1. **Outfit Crafting:** Combine user-provided clothing items into complete, fashionable looks and explain *why* they work.
+                2. **Specific Advice:** Help users pick clothes for their body type, occasion, or vibe — always positive, inclusive, and practical.
+                3. **Expertise:** You're fluent in streetwear, minimalist, smart casual, vintage, and techwear styles.
+                4. **Tips & Tricks:** Offer clever insights on layering, colors, accessories, and balance.
+
+                Your tone: Energetic, stylish, and encouraging — like a best friend with impeccable fashion sense.
+                Answer in a clear and well-formatted style using emojis and markdown to make it fun to read.
+
+                Make an outfit combination for '{acara}' as the occasion. ONLY from the following clothing list:\n{wardrobe_list}\n
+                Reference Data (This is a SILENT context filter. Do NOT mention it):
+                {pref_text}
+
+                **Your outfit recommendations MUST be complete.** A complete outfit includes at minimum:
+                 1.  **Top:** (e.g., shirt, t-shirt, jacket. If the context is a beach, you can specify 'topless' or 'bikini top').
+                 2.  **Bottom:** (e.g., pants, skirt, shorts).
+                 3.  **Footwear:** (e.g., sneakers, boots. If the context is a beach, you can specify 'barefoot').
+                 You may add accessories *after* these three core items are mentioned.
+
+                Explain why it's suitable. Don't suggest items that aren't on the list. Answer in Bahasa Indonesia.
+                """
         try:
             chat_completion = groq_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
@@ -213,7 +282,7 @@ async def on_message(message):
         try:
             user_question = message.content.replace(
                 f"<@!{bot.user.id}>", ""
-            ).strip()  # Menghapus mention dengan lebih baik
+            ).strip() 
             if not user_question:
                 await message.reply(
                     "Hai! Ada yang bisa aku bantu seputar outfit? Mention aku dan ajukan pertanyaanmu, ya!"
@@ -222,10 +291,9 @@ async def on_message(message):
 
             user_name = message.author.display_name
 
-            # Kumpulkan konteks dari database (kode ini tetap sama)
+            # Kumpulkan konteks dari database
             context_text = ""
             if prefs := db.get_explicit_preferences(message.author.id):
-                # ... (kode untuk mengambil preferensi tetap sama)
                 context_text += "\n\nUser preference Profile: "
                 if prefs[0]:
                     context_text += f"Like this type of style {prefs[0]}. "
@@ -233,9 +301,10 @@ async def on_message(message):
                     context_text += f"Like this color {prefs[1]}. "
                 if prefs[2]:
                     context_text += f"Avoids {prefs[2]}."
+                if prefs[3]:
+                    context_text += f"Prefers {prefs[3]} styles."
 
             if items := db.get_wardrobe_items(message.author.id):
-                # ... (kode untuk mengambil item lemari tetap sama)
                 wardrobe_list = ", ".join(f"{item[0]}" for item in items)
                 context_text += f"\nDigital Wardrobe Contents: {wardrobe_list}"
 
@@ -256,12 +325,44 @@ async def on_message(message):
 
             A user named "{user_name}" is asking: "{user_question}"
             
+            Reference Data (This is a SILENT context filter. Do NOT mention it):
             {context_text}
 
-            Your Task:
-            1. Start your answer by greeting the user by name (e.g., "Hello {user_name}!" or "Sure, {user_name}!").
-            2. Answer the question in detail and personally using the profile information and the contents of the provided closet.
-            3. Answer in Bahasa Indonesia.
+            **Your Task & Prioritization Rules:**
+
+            **ABSOLUTE MASTER RULE: DO NOT explain your logic or thought process.** * NEVER output text like "Tipe Pertanyaan:", "Personal Recommendation Request", "Jawaban:", "Type (B)", or any "meta-commentary". 
+            * Just greet the user and give the direct, natural, in-persona answer.
+
+            1.  **Greet the User:** Start your answer by greeting the user by name (e.g., "Halo {user_name}!").
+            
+            2.  **Formulate Your Answer (This is CRITICAL):**
+                * (You must decide which of these scenarios fits the `{user_question}` and follow the instruction)
+
+                * **If the question is a simple Greeting (like 'hi', 'halo', 'pagi'):**
+                    - Give a SHORT, friendly reply and ask how to help *with style*.
+                    - **Example:** "Halo {user_name}! 👋 Ada yang bisa aku bantu seputar style hari ini?"
+                
+                * **If it's General Small Talk (like 'apa kabar?', 'lagi apa?'):**
+                    - Answer *in your persona* (energetic, stylish, positive).
+                    - Pivot back to fashion naturally.
+                    - **Example for 'apa kabar?':** "Kabarku *fabulous*, {user_name}! 💃 Siap banget nih bantu kamu cari inspirasi outfit. Ada yang bisa aku bantu?"
+
+                * **If it's a General Fashion Knowledge question (like 'what styles are there?'):**
+                    - Answer the question directly.
+                    - **DO NOT** mention the user's preferences (`{context_text}`).
+                
+                * **If it's a Personal Recommendation Request (like 'what should I wear?', 'kasih ide outfit', 'style formal pake apa?'):**
+                    - Give the outfit recommendation directly.
+                    - Use `{context_text}` as a *silent filter* to create the outfit.
+                    - Prioritize the user's specific request (e.g., "gothic") over saved preferences.
+                    - Your outfit MUST be complete (Top, Bottom, Footwear).
+                    - **Example:** "Tentu! Untuk style formal, kamu bisa coba..." (and then give the outfit).
+
+                * **If it's Truly Off-Topic (like 'capital of France?', 'help with math'):**
+                    - Politely tell them you are a fashion assistant and *only* handle style/outfit questions.
+                    - **Example:** "Waduh, {user_name}, aku ini spesialisnya fashion dan style, jadi kurang paham soal itu 😅. Tapi kalau kamu tanya soal padu padan warna, aku jagonya!"
+
+            3.  **Language:** Answer in Bahasa Indonesia.
             """
 
             chat_completion = groq_client.chat.completions.create(
@@ -271,7 +372,7 @@ async def on_message(message):
             response = chat_completion.choices[0].message.content
             await message.reply(response)
         except Exception as e:
-            print(f"Terjadi error pada on_message: {e}")
+            logger.error(f"Terjadi error pada on_message: {e}", exc_info=True)
             await message.reply(
                 "Waduh, sepertinya ada sedikit gangguan di koneksiku. Coba tanya lagi beberapa saat, ya."
             )
@@ -282,6 +383,6 @@ if __name__ == "__main__":
     if DISCORD_TOKEN:
         bot.run(DISCORD_TOKEN)
     else:
-        print(
+        logger.critical(
             "ERROR: DISCORD_TOKEN tidak ditemukan. Pastikan sudah diatur di file .env"
         )

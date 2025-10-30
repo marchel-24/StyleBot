@@ -1,4 +1,4 @@
-# Styl-e 🤖✨ - Asisten Fashion AI Pribadi Anda
+# Styl-E 🤖✨ - Asisten Fashion AI Pribadi Anda
 
 ---
 **Anggota Kelompok**
@@ -6,10 +6,9 @@
 - Brian Tirafi Aufauzan (22/497916/TK/54592)
 ---
 
-Styl-e adalah bot Discord cerdas yang berfungsi sebagai asisten fashion pribadi Anda. Ditenagai oleh Groq API yang super cepat, bot ini memberikan rekomendasi outfit yang kreatif, personal, dan relevan langsung di server Anda, baik melalui perintah khusus maupun percakapan natural.
+Styl-E adalah bot Discord cerdas yang berfungsi sebagai asisten fashion pribadi Anda. Ditenagai oleh Groq API yang super cepat, bot ini memberikan rekomendasi outfit yang kreatif, personal, dan relevan langsung di server Anda, baik melalui perintah khusus maupun percakapan natural.
 
 ![Contoh Penggunaan Bot](https://i.pinimg.com/originals/6d/0e/2c/6d0e2cc4225dba6bb60f0e284a87734b.gif)
-*<small>(Rekomendasi: Ganti GIF ini dengan rekaman layar dari bot Anda yang sudah berfungsi)</small>*
 
 ---
 
@@ -24,13 +23,13 @@ Styl-e adalah bot Discord cerdas yang berfungsi sebagai asisten fashion pribadi 
 
 ## ✨ Fitur Unggulan
 
-Styl-e telah berevolusi dari sekadar pemberi saran menjadi asisten yang benar-benar personal.
+Styl-E telah berevolusi dari sekadar pemberi saran menjadi asisten yang benar-benar personal.
 
 #### Fitur Inti
 * **⚡ Respons Super Cepat:** Menggunakan Groq API untuk memberikan rekomendasi outfit dalam sekejap.
 * **🗣️ Interaksi Ganda:**
     * **Perintah Slash (`/`):** Untuk tugas terstruktur seperti menambah item atau meminta outfit spesifik.
-    * **Percakapan Alami (`@Styl-e`):** Mention bot dan ajukan pertanyaan bebas untuk mendapatkan jawaban kontekstual.
+    * **Percakapan Alami (`@Styl-E`):** Mention bot dan ajukan pertanyaan bebas untuk mendapatkan jawaban kontekstual.
 * **👋 Sapaan Personal:** Bot akan menyapa Anda dengan nama panggilan Anda di server untuk interaksi yang lebih akrab.
 
 #### Fitur Personalisasi Cerdas
@@ -204,5 +203,5 @@ Setelah bot online di server Anda:
 #### Rekomendasi & Percakapan
 
   * `/outfit gaya:<teks> acara:<teks>`: Minta rekomendasi spesifik. Bot akan menggunakan preferensi Anda untuk hasil yang lebih baik.
-  * `@Styl-e <pertanyaan Anda>`: Ajak bot mengobrol\! Tanyakan apa saja seputar fashion. Bot akan menggunakan semua data (preferensi & lemari) untuk menjawab secara kontekstual.
-      * Contoh: `@Styl-e aku mau ke puncak besok, enaknya pakai apa ya dari bajuku?`
+  * `@Styl-E <pertanyaan Anda>`: Ajak bot mengobrol\! Tanyakan apa saja seputar fashion. Bot akan menggunakan semua data (preferensi & lemari) untuk menjawab secara kontekstual.
+      * Contoh: `@Styl-E aku mau ke puncak besok, enaknya pakai apa ya dari bajuku?`

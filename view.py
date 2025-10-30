@@ -83,13 +83,24 @@ class PreferenceModal(discord.ui.Modal, title="Atur Preferensi Gayamu"):
         style=discord.TextStyle.paragraph,
     )
 
+    gender = discord.ui.TextInput(
+        label="Preferensi Gaya (Pria/Wanita/Androgini)",
+        placeholder="Contoh: Pria, Wanita, Maskulin, Feminin...",
+        required=False,
+        style=discord.TextStyle.short, # Style short lebih cocok di sini
+    )
+
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True, thinking=True)
+        
+        gender_val = self.gender.value or None
+        
         db.update_preferences(
             interaction.user.id,
-            self.favorite_styles.value,
-            self.favorite_colors.value,
-            self.avoided_items.value,
+            self.favorite_styles.value or None,
+            self.favorite_colors.value or None,
+            self.avoided_items.value or None,
+            gender_val,
         )
         await interaction.followup.send(
             "✅ Preferensimu sudah disimpan! Aku akan mengingat ini.", ephemeral=True
