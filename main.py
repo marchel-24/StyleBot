@@ -5,7 +5,7 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 from groq import Groq
-import logging  # BARU: Impor modul logging
+import logging 
 
 import database as db
 from view import RatingView, AddItemModal, PreferenceModal
@@ -353,7 +353,7 @@ async def on_message(message):
                 
                 * **If it's a Personal Recommendation Request (like 'what should I wear?', 'kasih ide outfit', 'style formal pake apa?'):**
                     - Give the outfit recommendation directly.
-                    - Use `{context_text}` as a *silent filter* to create the outfit.
+                    - Use `{context_text}` as a *silent filter* to create the outfit(**DONT USE IF** the user didnt ask to use what they have on digital wardrobe nor their preference).
                     - Prioritize the user's specific request (e.g., "gothic") over saved preferences.
                     - Your outfit MUST be complete (Top, Bottom, Footwear).
                     - **Example:** "Tentu! Untuk style formal, kamu bisa coba..." (and then give the outfit).
